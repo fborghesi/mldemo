@@ -1,0 +1,10 @@
+requests
+boto3
+tensorflow
+tensorflow_hub
+matplotlib
+scipy
+numpy
+six
+Pillow
+pyparsing==2.4.2

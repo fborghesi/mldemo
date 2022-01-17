@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Sample SAM Template for insurance
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 180
+    MemorySize: 4096
+
+Resources:
+  ModelPredictFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./api
+      #DockerTag: python3.8-v1
+
+  UploadBucket:
+    Type: 'AWS::S3::Bucket'
+    DependsOn:
+      - ProcessingLambdaPermission
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: insurance-upload-images-bucket
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt ModelPredictFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: in/
+                  - Name: suffix
+                    Value: jpg
+
+  ProcessingLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref ModelPredictFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub 'arn:aws:s3:::insurance-upload-images-bucket'
+      SourceAccount: !Ref AWS::AccountId
+
+
+  InsuranceLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRole'
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogWriter
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogStreams'
+                Resource: 'arn:aws:logs:*:*:*'
+        - PolicyName: FileReaderWriter
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:GetObject'
+                  - 's3:PutObject'
+                Resource: 'arn:aws:s3:::insurance-upload-images-bucket/*'
