@@ -3,53 +3,317 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Sample SAM Template for insurance
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+
+Parameters:
+  LambdaEnvironment:
+    Type: String
+    MinLength: 2
+    MaxLength: 10
+    AllowedPattern: "^[a-z0-9]*$"
+    Default: dev
+  DatabaseHost:
+    Type: String
+    Default: insurancecluster.wvbvp.mongodb.net
+  DatabasePort:
+    Type: Number
+    MinValue: 1024
+    MaxValue: 65535
+    Default: 27017
+  DatabaseUser:
+    Type: String
+    MinLength: 5
+    Default: insurance_app
+  DatabasePassword:
+    Type: String
+    MinLength: 5
+  DatabaseName:
+    Type: String
+    MinLength: 3
+    Default: insurancedb
+  CorsAllowedHeaders:
+    Type: String
+    MinLength: 1
+    Default: '*'
+  CorsAllowedOrigin:
+    Type: String
+    MinLength: 1
+    Default: '*'
+  CorsAllowedMethods:
+    Type: String
+    MinLength: 1
+    Default: '*'
+
+
 Globals:
   Function:
-    Timeout: 180
+    Timeout: 120
     MemorySize: 4096
+    Environment:
+      Variables:
+        LAMBDA_ENVIRONMENT: !Sub '${LambdaEnvironment}'
+        CORS_ALLOWED_HEADERS: !Sub '${CorsAllowedHeaders}'
+        CORS_ALLOWED_ORIGIN: !Sub '${CorsAllowedOrigin}'
+        CORS_ALLOWED_METHODS: !Sub '${CorsAllowedMethods}'
 
 Resources:
-  ModelPredictFunction:
-    Type: AWS::Serverless::Function
+  InsuranceDatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${LambdaEnvironment}.InsuranceDatabaseSecret'
+      SecretString: !Sub '{"username": "${DatabaseUser}","password": "${DatabasePassword}","host": "${DatabaseHost}","dbname": "${DatabaseName}"}'
+
+  JWTEncodeKeySecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub '${LambdaEnvironment}.JWTEncodeKeySecret'
+      Description: "This secret has a dynamically generated secret password for encoding JWT requests."
+      GenerateSecretString:
+        SecretStringTemplate: '{}'
+        GenerateStringKey: "key"
+        PasswordLength: 30
+        ExcludePunctuation: true
+
+  InsuranceApi:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      # StageName: Prod
+      StageName: !Sub '${LambdaEnvironment}'
+      BinaryMediaTypes:
+        - image/jpeg
+        - image/png
+      Auth:
+        DefaultAuthorizer: JWTCustomAuthorizer
+        Authorizers:
+          JWTCustomAuthorizer:
+            FunctionArn: !GetAtt JWTAuthFunction.Arn
+        AddDefaultAuthorizerToCorsPreflight: False
+      Cors:
+        AllowMethods: !Sub "'${CorsAllowedMethods}'"
+        AllowHeaders: !Sub "'${CorsAllowedHeaders}'"
+        AllowOrigin: !Sub "'${CorsAllowedOrigin}'"
+
+
+  JWTAuthFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/authorizer/Dockerfile
+      DockerContext: .
     Properties:
       PackageType: Image
       Architectures:
         - x86_64
       Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+
+  ObjectModelFunction:
+    Type: AWS::Serverless::Function
     Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ./api
-      #DockerTag: python3.8-v1
-
-  UploadBucket:
-    Type: 'AWS::S3::Bucket'
-    DependsOn:
-      - ProcessingLambdaPermission
-    DeletionPolicy: Retain
+      Dockerfile: api/object-model/Dockerfile
+      DockerContext: .
     Properties:
-      BucketName: insurance-upload-images-bucket
-      NotificationConfiguration:
-        LambdaConfigurations:
-          - Event: s3:ObjectCreated:*
-            Function: !GetAtt ModelPredictFunction.Arn
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: in/
-                  - Name: suffix
-                    Value: jpg
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        ObjectModelPostApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/object-model'
+            Method: POST
 
-  ProcessingLambdaPermission:
-    Type: AWS::Lambda::Permission
+  CarModelFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Dockerfile: api/car-model/Dockerfile
+      DockerContext: .
     Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName: !Ref ModelPredictFunction
-      Principal: s3.amazonaws.com
-      SourceArn: !Sub 'arn:aws:s3:::insurance-upload-images-bucket'
-      SourceAccount: !Ref AWS::AccountId
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        CarModelApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/car-model'
+            Method: POST
 
+  ApiUserLoginFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/login/Dockerfile.login
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user/login'
+            Method: POST
+            Auth:
+              Authorizer: NONE
+
+  ApiRefreshTokenFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/login/Dockerfile.refresh
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        RefreshTokenAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user/refresh-token'
+            Method: POST
+
+  ApiUserListFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/read/Dockerfile
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user'
+            Method: GET
+
+  ApiUserReadFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/read/Dockerfile
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user/{Id}'
+            Method: GET
+
+  ApiUserCreateFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/create/Dockerfile
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user'
+            Method: POST
+
+  ApiUserUpdateFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/update/Dockerfile
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user/{Id}'
+            Method: PUT
+
+  ApiUserDeleteFunction:
+    Type: 'AWS::Serverless::Function'
+    Metadata:
+      Dockerfile: api/user/delete/Dockerfile
+      DockerContext: .
+    Properties:
+      PackageType: Image
+      Architectures:
+        - x86_64
+      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Events:
+        LoginAPI:
+          Type: Api
+          Properties:
+            RestApiId: !Ref InsuranceApi
+            Path: '/user/{Id}'
+            Method: DELETE
+
+#  UploadBucket:
+#    Type: 'AWS::S3::Bucket'
+#    DependsOn:
+#      - UploadBucketInvokeObjectModelFunctionPermission
+#      - UploadBucketInvokeCarModelFunctionPermission
+#    DeletionPolicy: Retain
+#    Properties:
+#      BucketName: !Sub 'insurance-upload-images-bucket-${LambdaEnvironment}'
+#      NotificationConfiguration:
+#        LambdaConfigurations:
+#          - Event: s3:ObjectCreated:*
+#            Function: !GetAtt ObjectModelFunction.Arn
+#            Filter:
+#              S3Key:
+#                Rules:
+#                  - Name: prefix
+#                    Value: in/object
+#                  - Name: suffix
+#                    Value: jpg
+#          - Event: s3:ObjectCreated:*
+#            Function: !GetAtt CarModelFunction.Arn
+#            Filter:
+#              S3Key:
+#                Rules:
+#                  - Name: prefix
+#                    Value: in/car
+#                  - Name: suffix
+#                    Value: jpg
+#
+#  UploadBucketInvokeObjectModelFunctionPermission:
+#    Type: AWS::Lambda::Permission
+#    Properties:
+#      Action: 'lambda:InvokeFunction'
+#      FunctionName: !GetAtt ObjectModelFunction.Arn
+#      Principal: s3.amazonaws.com
+#      SourceArn: !Sub 'arn:aws:s3:::insurance-upload-images-bucket-${LambdaEnvironment}'
+#      SourceAccount: !Ref AWS::AccountId
+#
+#  UploadBucketInvokeCarModelFunctionPermission:
+#    Type: AWS::Lambda::Permission
+#    Properties:
+#      Action: 'lambda:InvokeFunction'
+#      FunctionName: !GetAtt CarModelFunction.Arn
+#      Principal: s3.amazonaws.com
+#      SourceArn: !Sub 'arn:aws:s3:::insurance-upload-images-bucket-${LambdaEnvironment}'
+#      SourceAccount: !Ref AWS::AccountId
 
   InsuranceLambdaFunctionRole:
     Type: AWS::IAM::Role
@@ -63,6 +327,17 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
       Policies:
+        - PolicyName: SecretValueAccessPolicy
+          PolicyDocument:
+             Version: 2012-10-17
+             Statement:
+              - Effect: Allow
+                Action:
+                  - 'secretsmanager:GetResourcePolicy'
+                  - 'secretsmanager:GetSecretValue'
+                  - 'secretsmanager:DescribeSecret'
+                  - 'secretsmanager:ListSecretVersionIds'
+                Resource: 'arn:aws:secretsmanager:*:*:*'
         - PolicyName: LogWriter
           PolicyDocument:
             Version: 2012-10-17
@@ -74,12 +349,14 @@ Resources:
                   - 'logs:PutLogEvents'
                   - 'logs:DescribeLogStreams'
                 Resource: 'arn:aws:logs:*:*:*'
-        - PolicyName: FileReaderWriter
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              - Effect: Allow
-                Action:
-                  - 's3:GetObject'
-                  - 's3:PutObject'
-                Resource: 'arn:aws:s3:::insurance-upload-images-bucket/*'
+#        - PolicyName: FileReaderWriter
+#          PolicyDocument:
+#            Version: 2012-10-17
+#            Statement:
+#              - Effect: Allow
+#                Action:
+#                  - 's3:GetObject'
+#                  - 's3:PutObject'
+#                Resource: 'arn:aws:s3:::insurance-upload-images-bucket/*'
+
+

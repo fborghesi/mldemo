@@ -1,0 +1,12 @@
+FROM public.ecr.aws/lambda/python:3.8
+
+ARG SITE_PKGS_PATH=/var/lang/lib/python3.8/site-packages
+
+# third party deps
+COPY layers/third-party/common/requirements.txt /tmp
+RUN mkdir -p ${SITE_PKGS_PATH} && \
+    python -m pip install --upgrade pip && \
+    python -m pip install -r /tmp/requirements.txt -t ${SITE_PKGS_PATH} && \
+    rm /tmp/requirements.txt
+
+ENTRYPOINT ["/lambda-entrypoint.sh"]

@@ -1,0 +1,30 @@
+FROM 491431825058.dkr.ecr.us-east-1.amazonaws.com/insurance:python-base-latest
+
+ARG SITE_PKGS_PATH=/var/lang/lib/python3.8/site-packages
+
+#protobuf-compiler
+RUN yum install -y git wget unzip gcc
+
+RUN mkdir -p /tmp/installs/protoc_3.3.0 && \
+    cd /tmp/installs/protoc_3.3.0 && \
+    wget https://github.com/google/protobuf/releases/download/v3.3.0/protoc-3.3.0-linux-x86_64.zip && \
+    unzip protoc-3.3.0-linux-x86_64.zip
+
+RUN git clone --depth 1 https://github.com/tensorflow/models && \
+    cd models/research/ && \
+    /tmp/installs/protoc_3.3.0/bin/protoc object_detection/protos/*.proto --python_out=. && \
+    cp object_detection/packages/tf2/setup.py . && \
+    python -m pip install . && \
+    rm -rf /tmp/installs/protoc_3.3.0
+
+# third party deps
+COPY layers/third-party/ml/requirements.txt /tmp
+RUN mkdir -p ${SITE_PKGS_PATH} && \
+    python -m pip install --upgrade pip && \
+    python -m pip install -r /tmp/requirements.txt -t ${SITE_PKGS_PATH} && \
+    rm /tmp/requirements.txt
+
+# add models
+COPY ../layers/models/mlmodels /opt/mlmodels
+
+ENTRYPOINT ["/lambda-entrypoint.sh"]
