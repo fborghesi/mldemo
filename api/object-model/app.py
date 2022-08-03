@@ -3,16 +3,21 @@ import tensorflow_hub as hub
 import tensorflow as tf
 from object_detection.utils import visualization_utils as viz_utils
 from object_detection.utils import label_map_util
+from lib.aws.bucket_helper import BucketHelper
 from six import BytesIO
 from PIL import Image
 import numpy as np
 import base64
 import os
+import io
 import shutil
 import time
 import tarfile
 import logging
 import lib.common.log_config
+
+LAMBDA_ENVIRONMENT = os.environ['LAMBDA_ENVIRONMENT']
+BUCKET_NAME = "insurance-upload-images-bucket-{env}".format(env=LAMBDA_ENVIRONMENT)
 
 BASE_DIR = '/opt/mlmodels/objects'
 URL_FILE_NAME = os.path.join(BASE_DIR, 'tfhub_model', 'url.txt')
@@ -157,9 +162,23 @@ def lambda_handler(event, context):
         # do prediction
         prediction = predict(body_data)
 
+        image = Image.fromarray(prediction)
+        with io.BytesIO() as output:
+            image.save(output, format="PNG")
+            result = base64.b64encode(output.getvalue())
+            return Response.success(200, result, MIME_TYPE, True).to_json()
+
+        # logger.info("saving data to /tmp/prediction.png...")
+        # image.save("/tmp/prediction.png")
+        #
+        # logger.info("uploading image to bucket s3://{bucket_name}/prediction.png...".format(bucket_name=BUCKET_NAME))
+        # bucket = BucketHelper(bucket_name=BUCKET_NAME)
+        # bucket.put("/tmp/prediction.png", "/prediction.png")
+        #
+        # logger.info("removing /tmp/prediction.png...")
+        # os.remove("/tmp/prediction.png")
+
         # set up response
-        result = base64.b64encode(prediction)
-        return Response.success(200, result, MIME_TYPE, True).to_json()
     except Exception as e:
         logger.exception(e)
 
