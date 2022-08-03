@@ -52,15 +52,13 @@ URL ?= 'https://tfhub.dev/tensorflow/faster_rcnn/resnet50_v1_640x640/1'
 DOWNLOAD_URL := $(shell echo $(URL) | sed -E 's/tfhub\.dev/storage\.googleapis\.com\/tfhub-modules/').tar.gz
 MODEL_DIR=tfhub_model
 
-all: $(MODEL_DIR)/saved_model.pb
+all: $(MODEL_DIR)/1.tar.gz
 
-$(MODEL_DIR)/saved_model.pb:
+$(MODEL_DIR)/1.tar.gz:
 	@mkdir -p $(MODEL_DIR)/
 	@echo $(URL) > $(MODEL_DIR)/url.txt
-	@wget $(DOWNLOAD_URL) -O /tmp/1.tar.gz
-	@tar -C$(MODEL_DIR)/ -xzvf /tmp/1.tar.gz
+	@wget $(DOWNLOAD_URL) -O $(MODEL_DIR)/1.tar.gz
 	@chmod -R a+r $(MODEL_DIR)/*
-	@rm /tmp/1.tar.gz
 
 clean:
-	@rm -Rf /tmp/1.tar.gz tfhub_model/
+	@rm -Rf /tmp/1.tar.gz $(MODEL_DIR)/

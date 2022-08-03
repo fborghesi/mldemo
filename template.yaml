@@ -42,6 +42,17 @@ Parameters:
     Type: String
     MinLength: 1
     Default: '*'
+  SessionTimeoutMins:
+    Type: Number
+    MinValue: 5 # 5 minutes
+    MaxValue: 1440 # 24 hours
+    Default: 30 # half hour
+  GoogleAuthClientSecret:
+    Type: String
+  GoogleAuthRedirectUrl:
+    Type: String
+    Default: 'http://www.localdev.net:3000/authorize'
+
 
 
 Globals:
@@ -54,6 +65,9 @@ Globals:
         CORS_ALLOWED_HEADERS: !Sub '${CorsAllowedHeaders}'
         CORS_ALLOWED_ORIGIN: !Sub '${CorsAllowedOrigin}'
         CORS_ALLOWED_METHODS: !Sub '${CorsAllowedMethods}'
+        SESSION_TIMEOUT_MINS: !Sub '${SessionTimeoutMins}'
+        GOOGLE_AUTH_REDIRECT_URL: !Sub '${GoogleAuthRedirectUrl}'
+
 
 Resources:
   InsuranceDatabaseSecret:
@@ -61,6 +75,12 @@ Resources:
     Properties:
       Name: !Sub '${LambdaEnvironment}.InsuranceDatabaseSecret'
       SecretString: !Sub '{"username": "${DatabaseUser}","password": "${DatabasePassword}","host": "${DatabaseHost}","dbname": "${DatabaseName}"}'
+
+  GoogleAuthSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${LambdaEnvironment}.GoogleAuthSecret'
+      SecretString: !Sub '{"client_secret": "${GoogleAuthClientSecret}"}'
 
   JWTEncodeKeySecret:
     Type: 'AWS::SecretsManager::Secret'
@@ -156,7 +176,7 @@ Resources:
           Properties:
             RestApiId: !Ref InsuranceApi
             Path: '/user/login'
-            Method: POST
+            Method: ANY
             Auth:
               Authorizer: NONE
 
