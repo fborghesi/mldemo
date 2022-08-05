@@ -49,11 +49,14 @@ Parameters:
     Default: 30 # half hour
   GoogleAuthClientSecret:
     Type: String
-  GoogleAuthRedirectUrl:
+  GoogleAuthRedirectDevUrl:
     Type: String
     Default: 'http://www.localdev.net:3000/authorize'
-
-
+  GoogleAuthRedirectProdUrl:
+    Type: String
+    Default: 'http://insurance.mldemo.tech/authorize' # for prod
+Conditions:
+  LambdaEnvIsDev: !Equals [ !Sub '${LambdaEnvironment}', dev ]
 
 Globals:
   Function:
@@ -66,8 +69,9 @@ Globals:
         CORS_ALLOWED_ORIGIN: !Sub '${CorsAllowedOrigin}'
         CORS_ALLOWED_METHODS: !Sub '${CorsAllowedMethods}'
         SESSION_TIMEOUT_MINS: !Sub '${SessionTimeoutMins}'
-        GOOGLE_AUTH_REDIRECT_URL: !Sub '${GoogleAuthRedirectUrl}'
-
+        #GOOGLE_AUTH_REDIRECT_URL: !Sub '${GoogleAuthRedirectUrl}'
+        GOOGLE_AUTH_REDIRECT_URL:
+          !If [ LambdaEnvIsDev, !Sub '${GoogleAuthRedirectDevUrl}', !Sub '${GoogleAuthRedirectProdUrl}' ]
 
 Resources:
   InsuranceDatabaseSecret:
