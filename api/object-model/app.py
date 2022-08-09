@@ -119,6 +119,8 @@ def predict(img_data):
 
     # resize the image
     img = Image.open(BytesIO(img_data))
+    if img.mode != "RGB":
+        img = img.convert("RGB")
     (w, h) = img.size
     img_arr = np.array(img.getdata()).reshape((1, h, w, 3)).astype(np.uint8)
 

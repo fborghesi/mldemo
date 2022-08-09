@@ -7,6 +7,7 @@ from PIL import Image
 import base64
 from io import BytesIO
 import logging
+import lib.common.log_config
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +42,18 @@ def predict(img):
     # img = load_image(in_img_path)
     img_array = img_to_model_input(img)
 
-    y_pred = model.predict(img_array, batch_size=None, verbose=0, steps=None)
-    max_score = np.argmax(y_pred, axis=1)[0]
-    img_class = class_labels[max_score]
+    y_pred = model.predict(img_array, batch_size=None, verbose=1, steps=None)
+    max_score_index = np.argmax(y_pred, axis=1)[0]
+    img_class = class_labels[max_score_index]
 
-    logger.info('Prediction: {}; Class: {}'.format(y_pred, img_class))
+    logger.info('Prediction: {}; Class: {}; Labels: {}'.format(y_pred, img_class, class_labels))
 
-    return img_class
+    result = {
+        'class': class_labels[max_score_index],
+        'score': str(y_pred[0][max_score_index])
+    }
+
+    return result
 
 def lambda_handler(event, context):
     try:
