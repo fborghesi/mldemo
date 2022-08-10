@@ -27,6 +27,9 @@ HUB_MODEL_DIR_LOCK = HUB_MODEL_DIR_TGT + '.lock'
 LABEL_MAP_PATH = os.path.join(BASE_DIR, 'mscoco_label_map.pbtxt')
 MIME_TYPE = 'image/png'
 MIN_SCORE = 0.5
+RESIZE_WIDTH_PX = 800
+RESIZE_HEIGHT_PX = 600
+
 logger = logging.getLogger(__name__)
 
 
@@ -107,18 +110,39 @@ logger.info("Loading cached model downloaded from URL {} from {}.".format(url, H
 load_options = tf.saved_model.LoadOptions(experimental_io_device='/job:localhost')
 hub_model = hub.load(HUB_MODEL_DIR_TGT, options=load_options)
 
-def load_img(self, src):
+def load_img(src):
     data = BytesIO(tf.io.gfile.GFile(src, 'rb').read())
     img = Image.open(data)
     (w, h) = img.size
+
     return np.array(img.getdata()).reshape((1, h, w, 3)).astype(np.uint8)
 
+
+def resize_img(img, max_w_px=0, max_h_px=0):
+    (w, h) = img.size
+    ratio = 0.0
+
+    if max_w_px > 0 and w > max_w_px:
+        ratio = max_w_px / w
+        w = int(ratio * w)
+        h = int(ratio * h)
+
+    if max_h_px > 0 and h > max_h_px:
+        ratio = max_h_px / h
+        w = int(ratio * w)
+        h = int(ratio * h)
+
+    if ratio > 0:
+        img = img.resize((w, h), Image.ANTIALIAS)
+
+    return img
 
 def predict(img_data):
     label_id_offset = 0
 
     # resize the image
     img = Image.open(BytesIO(img_data))
+    img = resize_img(img, RESIZE_WIDTH_PX, RESIZE_HEIGHT_PX);
     if img.mode != "RGB":
         img = img.convert("RGB")
     (w, h) = img.size
