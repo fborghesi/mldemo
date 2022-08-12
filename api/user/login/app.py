@@ -1,3 +1,5 @@
+import base64
+
 import ujson
 from lib.validators.login_validator import LoginSchema
 from lib.validators.refresh_token_validator import RefreshTokenSchema
@@ -8,11 +10,8 @@ from lib.db import mongodb
 import logging
 from oauth2client import client
 from lib.validators import token
-from lib.db.db_helper_exception import DatabaseHelperException
 from lib.aws.secret_mgr_helper import SecretsManagerHelper
-import urllib.parse
 import os
-import lib.common.log_config
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +103,13 @@ def google_login(code, redirect_uri, user_helper):
 
     result = found
     result["token"] = token.create_access_token(found)
+    #params = urllib.parse.urlencode(result)
+    data = ujson.dumps(result)
+    b64_data = base64.b64encode(data.encode('utf-8')).decode('utf-8')
+    params = 'data={}'.format(b64_data)
     uri = "{redirect_url}?{params}".format(redirect_url=GOOGLE_AUTH_REDIRECT_URL,
-                                           params=urllib.parse.urlencode(result))
+                                           params=params)
+    logger.info("Redirect URI: {}".format(uri))
     return Response.redirect(uri)
 
 

@@ -3,6 +3,7 @@ import re
 import jwt
 import os
 import logging
+import lib.common.log_config
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,6 @@ def lambda_handler(event, context):
     else:
         policy.allowAllMethods()
         logger.info('Allowing access to principal id {id}.'.format(id=principal_id))
-
 
     return policy.build()
 
