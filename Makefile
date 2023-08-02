@@ -2,7 +2,7 @@ PROFILE=franco.borghesi@gmail.com
 REGION=us-east-1
 ACCOUNT_ID=491431825058
 REGISTRY=$(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
-IMG_NAME=insurance
+IMG_NAME=mldemo
 IMG_TAG_MODEL=model-base
 IMG_TAG_PYTHON=python-base
 

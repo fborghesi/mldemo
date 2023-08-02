@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Sample SAM Template for insurance
+  Sample SAM Template for mldemo
 
 
 Parameters:
@@ -13,7 +13,7 @@ Parameters:
     Default: dev
   DatabaseHost:
     Type: String
-    Default: insurancecluster.wvbvp.mongodb.net
+    Default: mldemocluster.wvbvp.mongodb.net
   DatabasePort:
     Type: Number
     MinValue: 1024
@@ -22,14 +22,14 @@ Parameters:
   DatabaseUser:
     Type: String
     MinLength: 5
-    Default: insurance_app
+    Default: mldemo_app
   DatabasePassword:
     Type: String
     MinLength: 5
   DatabaseName:
     Type: String
     MinLength: 3
-    Default: insurancedb
+    Default: mldemodb
   CorsAllowedHeaders:
     Type: String
     MinLength: 1
@@ -54,7 +54,7 @@ Parameters:
     Default: 'http://www.localdev.net:3000/authorize'
   GoogleAuthRedirectProdUrl:
     Type: String
-    Default: 'http://insurance.mldemo.tech/authorize' # for prod
+    Default: 'http://mldemo.mldemo.tech/authorize' # for prod
 Conditions:
   LambdaEnvIsDev: !Equals [ !Sub '${LambdaEnvironment}', dev ]
 
@@ -299,7 +299,7 @@ Resources:
 #      - UploadBucketInvokeCarModelFunctionPermission
 #    DeletionPolicy: Retain
 #    Properties:
-#      BucketName: !Sub 'insurance-upload-images-bucket-${LambdaEnvironment}'
+#      BucketName: !Sub 'mldemo-upload-images-bucket-${LambdaEnvironment}'
 #      NotificationConfiguration:
 #        LambdaConfigurations:
 #          - Event: s3:ObjectCreated:*
@@ -327,7 +327,7 @@ Resources:
 #      Action: 'lambda:InvokeFunction'
 #      FunctionName: !GetAtt ObjectModelFunction.Arn
 #      Principal: s3.amazonaws.com
-#      SourceArn: !Sub 'arn:aws:s3:::insurance-upload-images-bucket-${LambdaEnvironment}'
+#      SourceArn: !Sub 'arn:aws:s3:::mldemo-upload-images-bucket-${LambdaEnvironment}'
 #      SourceAccount: !Ref AWS::AccountId
 #
 #  UploadBucketInvokeCarModelFunctionPermission:
@@ -336,7 +336,7 @@ Resources:
 #      Action: 'lambda:InvokeFunction'
 #      FunctionName: !GetAtt CarModelFunction.Arn
 #      Principal: s3.amazonaws.com
-#      SourceArn: !Sub 'arn:aws:s3:::insurance-upload-images-bucket-${LambdaEnvironment}'
+#      SourceArn: !Sub 'arn:aws:s3:::mldemo-upload-images-bucket-${LambdaEnvironment}'
 #      SourceAccount: !Ref AWS::AccountId
 
   InsuranceLambdaFunctionRole:
@@ -381,6 +381,6 @@ Resources:
 #                Action:
 #                  - 's3:GetObject'
 #                  - 's3:PutObject'
-#                Resource: 'arn:aws:s3:::insurance-upload-images-bucket/*'
+#                Resource: 'arn:aws:s3:::mldemo-upload-images-bucket/*'
 
 
