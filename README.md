@@ -4,13 +4,21 @@ Demo application with different models for testing and learning purposes.
 ## Deploy the application
 
 You'll need to build the project first, be sure to replace 
-**<mldemo-api-dir>** with the actual directory where your project lives in the 
-command below:
+**$API_DIR** and **$ECR_REPO** so that they will be properly replaced in the 
+commands below: 
+
+```bash
+# path to the API directory where the project lives
+export API_DIR=.
+
+# the elastic container repo where your images will be stored
+export ECR_REPO=491431825058.dkr.ecr.us-east-1.amazonaws.com/mldemo
+```
 
 ``bash
 % sam build \
-    --template <mldemo-api-dir>/template.yaml \
-    --build-dir <mldemo-api-dir>/.aws-sam/build \
+    --template $API_DIR/template.yaml \
+    --build-dir $API_DIR/.aws-sam/build \
     --use-container
 ``
 
@@ -18,23 +26,22 @@ Now it's time to package the project and upload the images, for that to happen
 you'll need a bucket (in my case it's *mldemo-data-upload-bucket*) where to
 upload the files and an ECR repo to store your images.
 
-
 ``bash
 % sam package \
-    --template-file <mldemo-api-dir>/.aws-sam/build/template.yaml \
-    --output-template-file <mldemo-api-dir>/.aws-sam/build/packaged-template.yaml \
+    --template-file $API_DIR/.aws-sam/build/template.yaml \
+    --output-template-file $API_DIR/.aws-sam/build/packaged-template.yaml \
     --s3-bucket mldemo-data-upload-bucket \
-    --image-repository 491431825058.dkr.ecr.us-east-1.amazonaws.com/mldemo
+    --image-repository $ECR_REPO
 ``
 
 The final step is the actual deployment:
 
 ```bash
 sam deploy deploy \
-  --template-file <mldemo-api-dir>/.aws-sam/build/template.yaml \
+  --template-file $API_DIR/.aws-sam/build/template.yaml \
   --stack-name mldemo-stack-prod \
   --s3-bucket mldemo-data-upload-bucket \
-  --image-repository 491431825058.dkr.ecr.us-east-1.amazonaws.com/mldemo \
+  --image-repository $ECR_REPO \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
   --no-execute-changeset \
   --parameter-overrides \

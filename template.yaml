@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Sample SAM Template for mldemo
+  Sample SAM Template for Machine Learning Demo
 
 
 Parameters:
@@ -54,7 +54,7 @@ Parameters:
     Default: 'http://www.localdev.net:3000/authorize'
   GoogleAuthRedirectProdUrl:
     Type: String
-    Default: 'http://mldemo.mldemo.tech/authorize' # for prod
+    Default: 'http://app.mldemo.tech/authorize' # for prod
 Conditions:
   LambdaEnvIsDev: !Equals [ !Sub '${LambdaEnvironment}', dev ]
 
