@@ -55,6 +55,10 @@ Parameters:
   GoogleAuthRedirectProdUrl:
     Type: String
     Default: 'http://app.mldemo.tech/authorize' # for prod
+  OpenAIApiKey:
+    Type: String
+    MinLength: 20
+    MaxLength: 602
 Conditions:
   LambdaEnvIsDev: !Equals [ !Sub '${LambdaEnvironment}', dev ]
 
@@ -74,10 +78,10 @@ Globals:
           !If [ LambdaEnvIsDev, !Sub '${GoogleAuthRedirectDevUrl}', !Sub '${GoogleAuthRedirectProdUrl}' ]
 
 Resources:
-  InsuranceDatabaseSecret:
+  MLDemoDatabaseSecret:
     Type: AWS::SecretsManager::Secret
     Properties:
-      Name: !Sub '${LambdaEnvironment}.InsuranceDatabaseSecret'
+      Name: !Sub '${LambdaEnvironment}.MLDemoDatabaseSecret'
       SecretString: !Sub '{"username": "${DatabaseUser}","password": "${DatabasePassword}","host": "${DatabaseHost}","dbname": "${DatabaseName}"}'
 
   GoogleAuthSecret:
@@ -85,6 +89,12 @@ Resources:
     Properties:
       Name: !Sub '${LambdaEnvironment}.GoogleAuthSecret'
       SecretString: !Sub '{"client_secret": "${GoogleAuthClientSecret}"}'
+
+  OpenAIApiKeySecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub '${LambdaEnvironment}.OpenAIApiKey'
+      SecretString: !Sub '{"api_key": "${OpenAIApiKey}"}'
 
   JWTEncodeKeySecret:
     Type: 'AWS::SecretsManager::Secret'
@@ -97,7 +107,7 @@ Resources:
         PasswordLength: 30
         ExcludePunctuation: true
 
-  InsuranceApi:
+  MLDemoApi:
     Type: 'AWS::Serverless::Api'
     Properties:
       # StageName: Prod
@@ -126,7 +136,7 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
 
   ObjectModelFunction:
     Type: AWS::Serverless::Function
@@ -137,31 +147,31 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         ObjectModelPostApi:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/object-model'
             Method: POST
 
-  CarModelFunction:
+  ASRModelFunction:
     Type: AWS::Serverless::Function
     Metadata:
-      Dockerfile: api/car-model/Dockerfile
+      Dockerfile: api/asr-model/Dockerfile
       DockerContext: .
     Properties:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
-        CarModelApi:
+        ASRModelApi:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
-            Path: '/car-model'
+            RestApiId: !Ref MLDemoApi
+            Path: '/asr-model'
             Method: POST
 
   ApiUserLoginFunction:
@@ -173,12 +183,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         LoginAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user/login'
             Method: ANY
             Auth:
@@ -193,12 +203,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         RefreshTokenAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user/refresh-token'
             Method: POST
 
@@ -211,12 +221,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         LoginAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user'
             Method: GET
 
@@ -229,12 +239,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         LoginAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user/{Id}'
             Method: GET
 
@@ -247,12 +257,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         LoginAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user'
             Method: POST
 
@@ -265,12 +275,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         LoginAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user/{Id}'
             Method: PUT
 
@@ -283,12 +293,12 @@ Resources:
       PackageType: Image
       Architectures:
         - x86_64
-      Role: !GetAtt InsuranceLambdaFunctionRole.Arn
+      Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
         LoginAPI:
           Type: Api
           Properties:
-            RestApiId: !Ref InsuranceApi
+            RestApiId: !Ref MLDemoApi
             Path: '/user/{Id}'
             Method: DELETE
 
@@ -339,7 +349,7 @@ Resources:
 #      SourceArn: !Sub 'arn:aws:s3:::mldemo-upload-images-bucket-${LambdaEnvironment}'
 #      SourceAccount: !Ref AWS::AccountId
 
-  InsuranceLambdaFunctionRole:
+  MLDemoLambdaFunctionRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub ${AWS::StackName}-lambda-role

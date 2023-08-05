@@ -2,13 +2,13 @@ requests
 #boto3
 six==1.16.0
 Pillow
-ujson==4.2.0
+ujson
 PyJWT==2.2.0
 marshmallow==3.13.0
 pymongo
 argon2-cffi==21.1.0
 certifi==2021.10.8
-cffi==1.15.0
+cffi==1.15.1
 dnspython
 requests_toolbelt
 requests==2.25.1

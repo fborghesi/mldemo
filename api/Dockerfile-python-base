@@ -1,6 +1,6 @@
-FROM public.ecr.aws/lambda/python:3.8
+FROM public.ecr.aws/lambda/python:3.11
 
-ARG SITE_PKGS_PATH=/var/lang/lib/python3.8/site-packages
+ARG SITE_PKGS_PATH=/var/lang/lib/python3.11/site-packages
 
 # third party deps
 COPY layers/third-party/common/requirements.txt /tmp

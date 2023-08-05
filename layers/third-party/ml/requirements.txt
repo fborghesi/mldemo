@@ -4,3 +4,4 @@ matplotlib
 scipy
 numpy
 pyparsing==2.4.2
+openai

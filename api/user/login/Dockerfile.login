@@ -1,4 +1,4 @@
-FROM 491431825058.dkr.ecr.us-east-1.amazonaws.com/insurance:python-base-latest
+FROM 491431825058.dkr.ecr.us-east-1.amazonaws.com/mldemo:python-base-latest
 
 # add shared code
 COPY layers/dependencies/python/lib ./lib/
