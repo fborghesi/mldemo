@@ -33,9 +33,10 @@ AWS Lambda functions are also docker images. There's a command that will take
 care of building the images, packaging them, uploading them to the ECR and 
 deploying all the resources on the cloud. 
 
-The command is:
+The command below shows you how to deploy the project, just replace <ENV> by
+the desired environment ('prod', 'dev', etc.):
 ```shell
-make deploy
+make ENV=<ENV> deploy
 ```
 
 ## Front-end Set Up
