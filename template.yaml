@@ -115,6 +115,7 @@ Resources:
       BinaryMediaTypes:
         - image/jpeg
         - image/png
+        - audio/webm
       Auth:
         DefaultAuthorizer: JWTCustomAuthorizer
         Authorizers:
@@ -156,10 +157,10 @@ Resources:
             Path: '/object-model'
             Method: POST
 
-  ASRModelFunction:
+  S2TModelFunction:
     Type: AWS::Serverless::Function
     Metadata:
-      Dockerfile: api/asr-model/Dockerfile
+      Dockerfile: api/s2t-model/Dockerfile
       DockerContext: .
     Properties:
       PackageType: Image
@@ -167,11 +168,11 @@ Resources:
         - x86_64
       Role: !GetAtt MLDemoLambdaFunctionRole.Arn
       Events:
-        ASRModelApi:
+        S2TModelApi:
           Type: Api
           Properties:
             RestApiId: !Ref MLDemoApi
-            Path: '/asr-model'
+            Path: '/s2t-model'
             Method: POST
 
   ApiUserLoginFunction:

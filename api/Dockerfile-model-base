@@ -1,6 +1,6 @@
 FROM 491431825058.dkr.ecr.us-east-1.amazonaws.com/mldemo:python-base-latest
 
-ARG SITE_PKGS_PATH=/var/lang/lib/python3.11s/site-packages
+ARG SITE_PKGS_PATH=/var/lang/lib/python3.11/site-packages
 
 RUN yum install -y git wget unzip gcc
 RUN pip3 install pyyaml==5.1 pycocotools tf-models-official
